@@ -1,6 +1,6 @@
 # DevOps from Scratch on Google Cloud
 
-A hands-on path from an empty Google Cloud account to 10 company apps running on
+A hands-on path from an empty Google Cloud account to 5 company apps running on
 self-managed Kubernetes, deployed by GitOps (Argo CD), with CI, security,
 monitoring and cost control. Do the stages in order, one at a time; each one ends
 with a "Done when" check. Don't move on until it passes.
@@ -19,12 +19,12 @@ GitHub repo ──► GitHub Actions (build, test, scan, push image)
   Argo CD  ◄── watches k8s manifests in Git
      │
      ▼
-Kubernetes cluster (kubeadm on Compute Engine VMs, built by Terraform + Ansible)
-  ├─ ingress-nginx + cert-manager (HTTPS)
+Kubernetes cluster (kubeadm on Compute Engine VMs, built by Terraform, then kubeadm)
+  ├─ Traefik ingress + cert-manager (HTTPS)
   ├─ External Secrets ◄── GCP Secret Manager
   ├─ Prometheus + Grafana + Loki (monitoring/logs)
   ├─ Kyverno + NetworkPolicies (security)
-  └─ app1 … app10  (dev and prod namespaces)
+  └─ app1 … app5  (dev and prod namespaces)
          │
          ▼
      Cloud SQL (databases)
@@ -39,7 +39,7 @@ terraform/
   envs/dev/         # calls modules for dev
   envs/prod/
 ansible/            # installs Kubernetes on the VMs
-apps/app1..app10/   # app source + Dockerfile (or links to their repos)
+apps/app1..app5/   # app source + Dockerfile (or links to their repos)
 charts/             # one shared Helm chart for all apps
 gitops/             # Argo CD Applications, per-env values
 platform/           # ingress, cert-manager, monitoring, policies ...
@@ -51,7 +51,7 @@ docs/               # your notes per stage
 
 ## Stage 0 - Foundations (local, free)
 **Learn:** Linux shell, Git & GitHub, Docker, basic networking (IP, CIDR, DNS, ports, HTTP).
-**Build:** containerize one of your 10 apps and run it with `docker compose` on your laptop.
+**Build:** containerize one of your 5 apps and run it with `docker compose` on your laptop.
 **Done when:** you can explain what a CIDR like `10.10.0.0/24` means and your app runs in Docker.
 
 ## Stage 1 - Cloud account & tools
@@ -76,17 +76,17 @@ docs/               # your notes per stage
 
 ## Stage 5 - Build Kubernetes with Ansible (native, kubeadm)
 **Learn:** configuration management, idempotency, how Kubernetes is really put together (containerd, kubelet, etcd, CNI).
-**Build:** `ansible/` playbooks: prepare nodes, `kubeadm init`, join workers, install Calico.
+**Build:** first by hand (`docs/01-infrastructure.md`: a Terraform startup script prepares the nodes, you run `kubeadm init`/`join` yourself), then automate it with `ansible/` playbooks.
 **Done when:** one command gives you `kubectl get nodes` → 3 `Ready` nodes.
 
 ## Stage 6 - Kubernetes fundamentals (by hand first)
 **Learn:** Pods, Deployments, Services, ConfigMaps, Secrets, namespaces, probes, requests/limits, PVCs, Ingress.
-**Build:** deploy app1 with plain YAML + ingress-nginx; reach it from a browser.
+**Build:** deploy app1 with plain YAML + Traefik ingress; reach it from a browser.
 **Done when:** you can kill a pod/node and explain what Kubernetes did.
 
-## Stage 7 - Containerize all 10 apps + registry
+## Stage 7 - Containerize all 5 apps + registry
 **Learn:** good Dockerfiles (multi-stage, non-root, small images), image tagging, Artifact Registry auth.
-**Build:** Dockerfiles for all 10 apps, images in Artifact Registry.
+**Build:** Dockerfiles for all 5 apps, images in Artifact Registry.
 **Done when:** every app image runs locally and is pushed with a version tag.
 
 ## Stage 8 - CI with GitHub Actions
@@ -96,12 +96,12 @@ docs/               # your notes per stage
 
 ## Stage 9 - Packaging with Helm
 **Learn:** templating, values per environment, one chart for many apps.
-**Build:** `charts/app`: one chart used by all 10 apps; `values-dev.yaml` / `values-prod.yaml`.
-**Done when:** `helm template` renders all 10 apps for both envs without copy-paste.
+**Build:** `charts/app`: one chart used by all 5 apps; `values-dev.yaml` / `values-prod.yaml`.
+**Done when:** `helm template` renders all 5 apps for both envs without copy-paste.
 
 ## Stage 10 - GitOps with Argo CD
 **Learn:** declarative delivery, app-of-apps / ApplicationSets, sync, rollback, drift.
-**Build:** install Argo CD (itself via Git), ApplicationSet that deploys all 10 apps to dev and prod.
+**Build:** install Argo CD (itself via Git), ApplicationSet that deploys all 5 apps to dev and prod.
 **Done when:** you change a value in Git and the cluster updates by itself; `kubectl edit` changes get reverted.
 
 ## Stage 11 - Networking, DNS & TLS

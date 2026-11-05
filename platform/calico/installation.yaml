@@ -1,0 +1,25 @@
+# Calico configuration for Google Cloud.
+#
+# encapsulation: VXLAN (always) is REQUIRED on GCP. Calico's default
+# (VXLANCrossSubnet) sends pod traffic unencapsulated between nodes in the same
+# subnet, and the GCP network drops packets addressed to pod IPs it doesn't know.
+# The CIDR must match `kubeadm init --pod-network-cidr`.
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  calicoNetwork:
+    ipPools:
+      - name: default-ipv4-ippool
+        blockSize: 26
+        cidr: 192.168.0.0/16
+        encapsulation: VXLAN
+        natOutgoing: Enabled
+        nodeSelector: all()
+---
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: default
+spec: {}

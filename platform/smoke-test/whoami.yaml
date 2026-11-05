@@ -1,0 +1,64 @@
+# End-to-end test: internet -> load balancer -> Traefik -> Service -> Pod.
+#   kubectl apply -f platform/smoke-test/whoami.yaml
+#   curl http://<ingress_ip>/whoami
+#   kubectl delete -f platform/smoke-test/whoami.yaml   # when done
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smoke-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  namespace: smoke-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.10.1
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  namespace: smoke-test
+spec:
+  selector:
+    app: whoami
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whoami
+  namespace: smoke-test
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /whoami
+            pathType: Prefix
+            backend:
+              service:
+                name: whoami
+                port:
+                  number: 80
