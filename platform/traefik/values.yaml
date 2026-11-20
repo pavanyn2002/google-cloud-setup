@@ -5,13 +5,21 @@
 # No Service of type LoadBalancer is used: a self-built cluster has no cloud
 # controller to create one.
 #
-# Install:
+# Installed by platform/install-addons.sh. By hand:
 #   helm repo add traefik https://traefik.github.io/charts
 #   helm repo update
 #   helm upgrade --install traefik traefik/traefik -n traefik --create-namespace \
 #     -f platform/traefik/values.yaml
 deployment:
   kind: DaemonSet
+
+# Two pods cannot share a node's port 80, so during an upgrade the old pod must
+# stop before the new one starts (the chart's default is the other way round).
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 0
 
 ports:
   web:

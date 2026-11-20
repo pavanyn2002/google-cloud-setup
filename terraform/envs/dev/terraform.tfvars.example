@@ -3,5 +3,5 @@ project_id          = "YOUR_PROJECT_ID"
 region              = "asia-south1"
 zone                = "asia-south1-a"
 worker_count        = 2
-worker_machine_type = "e2-standard-2"
-k8s_minor           = "v1.34"
+worker_machine_type = "e2-medium"
+k8s_minor           = "v1.35"

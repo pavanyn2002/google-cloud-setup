@@ -20,11 +20,13 @@ variable "worker_count" {
 }
 
 variable "worker_machine_type" {
-  type    = string
-  default = "e2-standard-2"
+  description = "e2-medium = 4 GB per worker. Use e2-standard-2 (8 GB) if pods stay Pending."
+  type        = string
+  default     = "e2-medium"
 }
 
 variable "k8s_minor" {
-  type    = string
-  default = "v1.34"
+  description = "Keep in line with kubernetesVersion in platform/kubeadm/init-config.yaml."
+  type        = string
+  default     = "v1.35"
 }

@@ -1,0 +1,47 @@
+# kubeadm configuration for the control plane node (cp-1).
+#
+# Used on cp-1 with:
+#   sudo kubeadm config validate --config init-config.yaml
+#   sudo kubeadm init --config init-config.yaml
+#
+# A config file does the same job as `kubeadm init --flag ...`, but it lives in
+# git, so the cluster's settings are reviewable and repeatable.
+#
+# Three documents in one file:
+#   1. InitConfiguration     settings for THIS node only
+#   2. ClusterConfiguration  settings for the whole cluster
+#   3. KubeletConfiguration  settings for the kubelet on every node
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+nodeRegistration:
+  # Talk to containerd (installed by the VM startup script).
+  criSocket: unix:///run/containerd/containerd.sock
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+clusterName: k8s-dev
+# Latest 1.35 patch release. Keep the minor version the same as `k8s_minor`
+# in terraform/envs/dev (that is what installs kubeadm and kubelet on the VMs).
+kubernetesVersion: stable-1.35
+networking:
+  # Pod IPs. Must match platform/calico/installation.yaml and `pod_cidr` in Terraform.
+  podSubnet: 192.168.0.0/16
+  # Service (ClusterIP) IPs. Must not overlap the VPC subnet 10.10.0.0/24 or the pod range.
+  serviceSubnet: 10.96.0.0/12
+  dnsDomain: cluster.local
+apiServer:
+  certSANs:
+    # Lets kubectl on a laptop reach the API server through an IAP tunnel
+    # (the tunnel makes the API server appear at https://127.0.0.1:6443).
+    - 127.0.0.1
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+# Must match containerd's setting (SystemdCgroup = true in the startup script).
+cgroupDriver: systemd
+# Keep some memory back for the OS and for Kubernetes' own processes, so busy
+# app pods cannot starve the node itself. Matters on small (4 GB) VMs.
+systemReserved:
+  memory: 256Mi
+kubeReserved:
+  memory: 256Mi

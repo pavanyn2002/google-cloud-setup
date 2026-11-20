@@ -28,9 +28,9 @@ variable "control_plane_machine_type" {
 }
 
 variable "worker_machine_type" {
-  description = "Where your apps run. e2-standard-2 = 2 vCPU / 8 GB."
+  description = "Where your apps run. e2-medium = 2 shared vCPU / 4 GB. Use e2-standard-2 (8 GB) if pods stay Pending."
   type        = string
-  default     = "e2-standard-2"
+  default     = "e2-medium"
 }
 
 variable "image" {
@@ -44,12 +44,12 @@ variable "disk_size_gb" {
 }
 
 variable "k8s_minor" {
-  description = "Kubernetes minor version for the apt repo, e.g. v1.34. Check https://kubernetes.io/releases/ for supported versions."
+  description = "Kubernetes minor version for the apt repo, e.g. v1.35. Check https://kubernetes.io/releases/ for supported versions."
   type        = string
-  default     = "v1.34"
+  default     = "v1.35"
 
   validation {
     condition     = can(regex("^v1\\.[0-9]+$", var.k8s_minor))
-    error_message = "k8s_minor must look like v1.34."
+    error_message = "k8s_minor must look like v1.35."
   }
 }

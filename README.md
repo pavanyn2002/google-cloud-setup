@@ -16,9 +16,14 @@ terraform/
   modules/ingress-lb/   static IP + load balancer to the workers
   envs/dev/             the dev environment
 platform/
+  kubeadm/              cluster config: init (control plane) and join (workers)
   calico/               pod network settings for GCP
+  namespaces/           dev, test and prod environments with quotas
   traefik/              ingress controller settings
   smoke-test/           end-to-end test app
+  install-addons.sh     namespaces, storage, metrics, Traefik
+scripts/
+  bootstrap-cluster.sh  after terraform apply: 3 VMs -> working cluster
 docs/                   step-by-step guides
 .claude/                Claude Code skills and plugins for this project
 ```

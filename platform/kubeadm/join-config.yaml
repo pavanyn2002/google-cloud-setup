@@ -1,0 +1,22 @@
+# kubeadm configuration for a worker node (worker-1, worker-2).
+#
+# This is a template: the three __PLACEHOLDERS__ are filled in by join-worker.sh
+# with values that only exist after the control plane is created.
+# Get them on cp-1 with:
+#   sudo kubeadm token create --print-join-command
+#
+# Never commit a filled-in copy: the token lets a machine join the cluster.
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    # cp-1's private IP and the API server port, e.g. 10.10.0.2:6443
+    apiServerEndpoint: __API_SERVER__
+    # Short-lived password (expires after 24 hours), e.g. abcdef.0123456789abcdef
+    token: __TOKEN__
+    # Fingerprint of the cluster's CA certificate, e.g. sha256:1a2b...
+    # The worker uses it to check it is talking to the real control plane.
+    caCertHashes:
+      - __CA_CERT_HASH__
+nodeRegistration:
+  criSocket: unix:///run/containerd/containerd.sock

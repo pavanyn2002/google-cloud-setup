@@ -3,8 +3,9 @@
 Covers roadmap Stages 1–6. At the end you will have:
 
 - a private network on Google Cloud, built with Terraform
-- 3 VMs (1 control plane, 2 workers) with no public IPs
+- 3 VMs (1 control plane, 2 workers, all e2-medium) with no public IPs
 - a native Kubernetes cluster you built yourself with `kubeadm`
+- `dev`, `test` and `prod` namespaces, each with its own resource quota
 - one public IP that routes web traffic into the cluster
 - a private registry for your 5 apps' images
 
@@ -93,6 +94,19 @@ What just happened (open each file and read it):
 | `modules/ingress-lb/main.tf` | static IP + load balancer to the workers |
 | `envs/dev/main.tf` | wires the modules together + Artifact Registry |
 
+## Fast path: Steps 4–7 and the add-ons in one command
+
+```bash
+./scripts/bootstrap-cluster.sh
+```
+
+It waits for the VMs, creates the control plane, joins both workers and installs
+the add-ons (about 10 minutes). It only copies `platform/` to each VM and runs the
+small scripts in it, so read those to see exactly what happens. Then go to Step 8.
+
+**Learning for the CKA?** Do Steps 4–7 by hand instead, at least once. They are
+the same commands the scripts run.
+
 ## Step 4: Wait for the nodes to finish preparing
 
 The startup script takes 2–4 minutes after the VMs boot. Check each node:
@@ -113,18 +127,20 @@ gcloud compute ssh k8s-dev-cp-1 --zone=asia-south1-a --tunnel-through-iap \
 
 ## Step 5: Create the control plane (on cp-1)
 
+The cluster's settings live in `platform/kubeadm/init-config.yaml` (open it: every
+line is explained). Copy the `platform/` folder to cp-1, then log in:
+
 ```bash
+gcloud compute scp --recurse platform k8s-dev-cp-1:~/ --zone=asia-south1-a --tunnel-through-iap
 gcloud compute ssh k8s-dev-cp-1 --zone=asia-south1-a --tunnel-through-iap
 ```
 
 Then, **on cp-1**:
 
 ```bash
-# --pod-network-cidr must match Calico's pool and the firewall rule.
-# --apiserver-cert-extra-sans=127.0.0.1 lets you use kubectl from your laptop through an IAP tunnel.
-sudo kubeadm init \
-  --pod-network-cidr=192.168.0.0/16 \
-  --apiserver-cert-extra-sans=127.0.0.1
+cd ~/platform/kubeadm
+sudo kubeadm config validate --config init-config.yaml   # catches typos before anything is created
+sudo kubeadm init --config init-config.yaml
 
 mkdir -p $HOME/.kube
 sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -140,15 +156,15 @@ Pods on different nodes need a network between them. Calico provides it (and
 NetworkPolicies, which you'll use in Stage 14).
 
 ```bash
-CALICO=v3.30.0   # check https://github.com/projectcalico/calico/releases for newer
+CALICO=v3.33.1   # check https://github.com/projectcalico/calico/releases for newer
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/$CALICO/manifests/operator-crds.yaml
 kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/$CALICO/manifests/tigera-operator.yaml
 ```
 
-The Calico settings must use VXLAN on Google Cloud (the file explains why).
-Paste `platform/calico/installation.yaml` from this repo into a file on cp-1, then:
+The Calico settings must use VXLAN on Google Cloud (the file explains why):
 
 ```bash
-kubectl create -f installation.yaml
+kubectl create -f ~/platform/calico/installation.yaml
 watch kubectl get pods -n calico-system      # wait until all are Running, then Ctrl+C
 kubectl get nodes                            # cp-1 is now Ready
 ```
@@ -163,6 +179,9 @@ exit
 
 Repeat for `k8s-dev-worker-2`. Lost the join command, or more than 24h passed?
 Make a new one **on cp-1**: `sudo kubeadm token create --print-join-command`.
+
+The same join written as a config file is `platform/kubeadm/join-config.yaml`;
+`join-worker.sh` fills in its three values and runs `kubeadm join --config`.
 
 On cp-1: `kubectl get nodes` should show 3 nodes, all `Ready`.
 
@@ -196,9 +215,13 @@ From here on, every `kubectl`/`helm` command runs on your laptop.
 
 ## Step 9: Cluster add-ons
 
-A bare kubeadm cluster has no storage, no metrics and no ingress. Add them:
+A bare kubeadm cluster has no storage, no metrics and no ingress.
+`platform/install-addons.sh` adds them (the fast path already ran it). By hand:
 
 ```bash
+# Environments: dev, test and prod namespaces, each with a quota
+kubectl apply -f platform/namespaces/environments.yaml
+
 # Storage: a default StorageClass so PersistentVolumeClaims work (data lives on the node's disk)
 kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.30/deploy/local-path-storage.yaml
 kubectl patch storageclass local-path \
