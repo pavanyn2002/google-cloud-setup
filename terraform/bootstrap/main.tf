@@ -27,6 +27,9 @@ locals {
     "secretmanager.googleapis.com",        # used in Stage 12
     "logging.googleapis.com",
     "monitoring.googleapis.com",
+    "container.googleapis.com",      # GKE (envs/prod)
+    "sts.googleapis.com",            # Workload Identity Federation for GitHub Actions
+    "billingbudgets.googleapis.com", # budget alerts
   ]
 }
 

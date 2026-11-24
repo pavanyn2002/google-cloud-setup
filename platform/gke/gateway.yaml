@@ -1,0 +1,79 @@
+# Shared Google load balancer for production APIs (GKE Gateway API).
+# Prereqs from Terraform (envs/prod outputs):
+#   gateway_ip_name     -> NamedAddress below
+#   cloud_armor_policy  -> securityPolicy in each GCPBackendPolicy
+# TLS: Cloudflare Origin CA certificate stored as a Secret in the gateway namespace:
+#   kubectl -n gateway create secret tls cloudflare-origin-cert --cert=origin.pem --key=origin-key.pem
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: gateway
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  addresses:
+    - type: NamedAddress
+      value: tatva-prod-gateway-ip
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: cloudflare-origin-cert
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: "true"
+---
+# ---- Tatva Direct: copy this block for connect (/health, port 8001) and partner (/health, port 8088)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: direct-api
+  namespace: direct
+spec:
+  parentRefs:
+    - name: external
+      namespace: gateway
+  hostnames:
+    - api-direct.withtatva.ai # TODO: confirm the production API hostname
+  rules:
+    - backendRefs:
+        - name: direct-api
+          port: 80
+---
+# Only Cloudflare may reach this backend (Cloud Armor policy from Terraform).
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: direct-api
+  namespace: direct
+spec:
+  default:
+    securityPolicy: tatva-prod-cloudflare-only
+    timeoutSec: 120 # websocket and long requests
+  targetRef:
+    group: ""
+    kind: Service
+    name: direct-api
+---
+# The load balancer checks the app's real health endpoint, not "/".
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: direct-api
+  namespace: direct
+spec:
+  default:
+    config:
+      type: HTTP
+      httpHealthCheck:
+        requestPath: /api/health
+  targetRef:
+    group: ""
+    kind: Service
+    name: direct-api

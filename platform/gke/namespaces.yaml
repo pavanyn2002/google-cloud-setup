@@ -1,0 +1,33 @@
+# Production cluster namespaces: one per app, plus one for the shared Gateway.
+# "restricted" Pod Security blocks privileged / root containers.
+# gateway-access=true lets the app's HTTPRoutes attach to the shared Gateway.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: direct
+  labels:
+    gateway-access: "true"
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: connect
+  labels:
+    gateway-access: "true"
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: partner
+  labels:
+    gateway-access: "true"
+    pod-security.kubernetes.io/enforce: restricted
