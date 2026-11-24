@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+project_id         = "YOUR_PROJECT_ID"
+region             = "asia-south1"
+zone               = "asia-south1-a"
+extra_zones        = ["asia-south1-b"]
+machine_type       = "e2-standard-2"
+min_nodes_per_zone = 1
+max_nodes_per_zone = 2
+
+# Optional: billing account for the budget alert (leave "" to skip)
+billing_account   = ""
+budget_amount_usd = 250
+
+# Optional: your office/home IP for the control plane's IP endpoint
+# authorized_networks = [{ name = "office", cidr = "203.0.113.10/32" }]
